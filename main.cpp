@@ -8,11 +8,22 @@
 *   Copyright (c) 2015 Ramon Santamaria (@raysan5)
 *
 ********************************************************************************************/
-
+#include <initializer_list>
 #include "raylib.h"
 #include "raymath.h"
 
 #define MAX_COLUMNS 20
+
+#define RLIGHTS_IMPLEMENTATION
+#include "rlights.h"
+
+#if defined(PLATFORM_DESKTOP)
+    #define GLSL_VERSION            330
+#else   // PLATFORM_RPI, PLATFORM_ANDROID, PLATFORM_WEB
+    #define GLSL_VERSION            100
+#endif
+
+
 
 int main(void)
 {
@@ -33,10 +44,35 @@ int main(void)
     camera.type = CAMERA_PERSPECTIVE;
     //camera.projection = CAMERA_PERSPECTIVE;
 
+    Shader shader = LoadShader(TextFormat("resources/shaders/glsl%i/base_lighting.vs", GLSL_VERSION),
+                               TextFormat("resources/shaders/glsl%i/fog.fs", GLSL_VERSION));
+    // Get some required shader loactions
+    shader.locs[LOC_VECTOR_VIEW] = GetShaderLocation(shader, "viewPos");
+    // NOTE: "matModel" location name is automatically assigned on shader loading, 
+    // no need to get the location again if using that uniform name
+    shader.locs[LOC_MATRIX_MODEL] = GetShaderLocation(shader, "matModel");
+    float arr[4] = { 0.1f, 0.1f, 0.1f, 1.0f };
+    //auto value = (float[4])arr;
+    const void* value ;
+    
+    // Ambient light level (some basic lighting)
+    int ambientLoc = GetShaderLocation(shader, "ambient");
+    //SetShaderValue(shader, ambientLoc, (float[4]){ 0.1f, 0.1f, 0.1f, 1.0f }, UNIFORM_VEC4);
+    SetShaderValue(shader, ambientLoc, arr, UNIFORM_VEC4);
+    //float cameraPos[3] = { camera.position.x, camera.position.y, camera.position.z };
+    //SetShaderValue(shader, shader.locs[LOC_VECTOR_VIEW], cameraPos, UNIFORM_VEC3);
+
+    Light another = CreateLight(LIGHT_POINT, (Vector3){ 20, 20, -2 }, Vector3Zero(), WHITE, shader);
+
+    float fogDensity = 0.015f;
+    int fogDensityLoc = GetShaderLocation(shader, "fogDensity");
+    SetShaderValue(shader, fogDensityLoc, &fogDensity, UNIFORM_FLOAT);
+
     Model tower = LoadModel("resources/models/obj/turret.obj");                 // Load OBJ model
     Texture2D texture = LoadTexture("resources/models/obj/turret_diffuse.png"); // Load model texture
     //tower.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = texture;            // Set model diffuse texture
     tower.materials[0].maps[MAP_DIFFUSE].texture = texture;            // Set model diffuse texture
+    tower.materials[0].shader = shader;
 
     Vector3 towerPos = { 0.0f, 0.0f, 0.0f };                        // Set model position
 
@@ -64,6 +100,11 @@ int main(void)
         //----------------------------------------------------------------------------------
         UpdateCamera(&camera);                  // Update camera
         //----------------------------------------------------------------------------------
+        // Update the shader with the camera view vector (points towards { 0.0f, 0.0f, 0.0f })
+        float cameraPos[3] = { camera.position.x, camera.position.y, camera.position.z };
+        SetShaderValue(shader, shader.locs[LOC_VECTOR_VIEW], cameraPos, UNIFORM_VEC3);
+        //----------------------------------------------------------------------------------
+
 
         // Draw
         //----------------------------------------------------------------------------------
@@ -99,6 +140,8 @@ int main(void)
             DrawText("- Move with keys: W, A, S, D", 40, 40, 10, DARKGRAY);
             DrawText("- Mouse move to look around", 40, 60, 10, DARKGRAY);
 
+            DrawFPS(10, 10);
+
         EndDrawing();
         //----------------------------------------------------------------------------------
     }
@@ -106,6 +149,7 @@ int main(void)
     // De-Initialization
     UnloadModel(tower);         // Unload model
     UnloadTexture(texture);     // Unload texture
+    UnloadShader(shader);   // Unload shader
     //--------------------------------------------------------------------------------------
     CloseWindow();        // Close window and OpenGL context
     //--------------------------------------------------------------------------------------
