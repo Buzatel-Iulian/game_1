@@ -69,9 +69,10 @@ int main(void)
     SetShaderValue(shader, fogDensityLoc, &fogDensity, UNIFORM_FLOAT);
 
     Model tower = LoadModel("resources/models/obj/turret.obj");                 // Load OBJ model
-    Texture2D texture = LoadTexture("resources/models/obj/turret_diffuse.png"); // Load model texture
+    Texture2D tower_skin = LoadTexture("resources/models/obj/turret_diffuse.png"); // Load model texture
+    Texture2D texture = LoadTexture("resources/models/obj/turret_diffuse.png");
     //tower.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = texture;            // Set model diffuse texture
-    tower.materials[0].maps[MAP_DIFFUSE].texture = texture;            // Set model diffuse texture
+    tower.materials[0].maps[MAP_DIFFUSE].texture = tower_skin;            // Set model diffuse texture
     tower.materials[0].shader = shader;
 
     Vector3 towerPos = { 0.0f, 0.0f, 0.0f };                        // Set model position
@@ -80,12 +81,16 @@ int main(void)
     float heights[MAX_COLUMNS] = { 0 };
     Vector3 positions[MAX_COLUMNS] = { 0 };
     Color colors[MAX_COLUMNS] = { 0 };
+    Model COLUMNS[MAX_COLUMNS] = {0};
 
     for (int i = 0; i < MAX_COLUMNS; i++)
     {
         heights[i] = (float)GetRandomValue(1, 12);
         positions[i] = (Vector3){ (float)GetRandomValue(-15, 15), heights[i]/2.0f, (float)GetRandomValue(-15, 15) };
-        colors[i] = (Color){ GetRandomValue(20, 255), GetRandomValue(10, 55), 30, 255 };
+        //colors[i] = (Color){ GetRandomValue(20, 255), GetRandomValue(10, 55), 30, 255 };
+	    COLUMNS[i] = LoadModelFromMesh(GenMeshCube(1.0f, heights[i], 1.0f));
+	    COLUMNS[i].materials[0].shader = shader;
+        COLUMNS[i].materials[0].maps[MAP_DIFFUSE].texture = texture;
     }
 
     SetCameraMode(camera, CAMERA_FIRST_PERSON); // Set a first person camera mode
@@ -120,25 +125,26 @@ int main(void)
                 DrawModel(tower, towerPos, 1.0f, WHITE);
 
                 DrawPlane((Vector3){ 0.0f, 0.0f, 0.0f }, (Vector2){ 32.0f, 32.0f }, LIGHTGRAY); // Draw ground
-                DrawCube((Vector3){ -16.0f, 2.5f, 0.0f }, 1.0f, 5.0f, 32.0f, BLUE);     // Draw a blue wall
-                DrawCube((Vector3){ 16.0f, 2.5f, 0.0f }, 1.0f, 5.0f, 32.0f, LIME);      // Draw a green wall
-                DrawCube((Vector3){ 0.0f, 2.5f, 16.0f }, 32.0f, 5.0f, 1.0f, GOLD);      // Draw a yellow wall
+                //DrawCube((Vector3){ -16.0f, 2.5f, 0.0f }, 1.0f, 5.0f, 32.0f, BLUE);     // Draw a blue wall
+                //DrawCube((Vector3){ 16.0f, 2.5f, 0.0f }, 1.0f, 5.0f, 32.0f, LIME);      // Draw a green wall
+                //DrawCube((Vector3){ 0.0f, 2.5f, 16.0f }, 32.0f, 5.0f, 1.0f, GOLD);      // Draw a yellow wall
 
                 // Draw some cubes around
                 for (int i = 0; i < MAX_COLUMNS; i++)
                 {
-                    DrawCube(positions[i], 2.0f, heights[i], 2.0f, colors[i]);
-                    DrawCubeWires(positions[i], 2.0f, heights[i], 2.0f, MAROON);
+                    //DrawCube(positions[i], 2.0f, heights[i], 2.0f, colors[i]);
+                    //DrawCubeWires(positions[i], 2.0f, heights[i], 2.0f, MAROON);
+                    DrawModel(COLUMNS[i], positions[i], 1.0f, WHITE);
                 }
 
             EndMode3D();
 
-            DrawRectangle( 10, 10, 220, 70, Fade(SKYBLUE, 0.5f));
-            DrawRectangleLines( 10, 10, 220, 70, BLUE);
+            //DrawRectangle( 10, 10, 220, 70, Fade(SKYBLUE, 0.5f));
+            //DrawRectangleLines( 10, 10, 220, 70, BLUE);
 
-            DrawText("First person camera default controls:", 20, 20, 10, BLACK);
-            DrawText("- Move with keys: W, A, S, D", 40, 40, 10, DARKGRAY);
-            DrawText("- Mouse move to look around", 40, 60, 10, DARKGRAY);
+            //DrawText("First person camera default controls:", 20, 20, 10, BLACK);
+            //DrawText("- Move with keys: W, A, S, D", 40, 40, 10, DARKGRAY);
+            //DrawText("- Mouse move to look around", 40, 60, 10, DARKGRAY);
 
             DrawFPS(10, 10);
 
@@ -149,7 +155,12 @@ int main(void)
     // De-Initialization
     UnloadModel(tower);         // Unload model
     UnloadTexture(texture);     // Unload texture
+    UnloadTexture(tower_skin);
     UnloadShader(shader);   // Unload shader
+    for (int i = 0; i < MAX_COLUMNS; i++)
+                {
+                    UnloadModel(COLUMNS[i]);
+                }
     //--------------------------------------------------------------------------------------
     CloseWindow();        // Close window and OpenGL context
     //--------------------------------------------------------------------------------------
